@@ -1,0 +1,32 @@
+name: Build Slicer macOS ARM
+
+on:
+  push:
+    branches: [ macos-arm-build ]
+  workflow_dispatch:  # 手動実行用
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Setup Build Environment
+      run: |
+        brew install qt@5 cmake ninja
+        
+    - name: Configure
+      run: |
+        mkdir build && cd build
+        cmake -GNinja \
+          -DCMAKE_BUILD_TYPE:STRING=Release \
+          -DQt5_DIR:PATH=$(brew --prefix qt@5)/lib/cmake/Qt5 \
+          ..
+          
+    - name: Build
+      run: |
+        cd build
+        ninja -j4
