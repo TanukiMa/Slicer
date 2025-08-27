@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-latest  # ARM環境を維持
     
     steps:
     - uses: actions/checkout@v4
@@ -16,22 +16,30 @@ jobs:
         
     - name: Setup Build Environment
       run: |
-        # CMake 3.x系をインストール（4.x系を回避）
+        # 現在のCMakeをアンリンク
         brew unlink cmake || true
-        brew install cmake@3.29
-        brew link cmake@3.29 --force
+        
+        # 独自tapを作成してCMakeの古いバージョンを抽出
+        brew tap-new local/cmake-old
+        
+        # CMake 3.28.x系を抽出（2023年のバージョン）
+        brew extract --version=3.28.3 cmake local/cmake-old
+        
+        # 古いCMakeをインストール
+        brew install cmake@3.28.3
         
         # Qt5とNinja
         brew install qt@5 ninja
         
         # パス設定
-        echo "/opt/homebrew/opt/cmake@3.29/bin" >> $GITHUB_PATH
+        echo "/opt/homebrew/opt/cmake@3.28.3/bin" >> $GITHUB_PATH
         echo "/opt/homebrew/opt/qt@5/bin" >> $GITHUB_PATH
         
     - name: Verify versions
       run: |
         cmake --version
         which cmake
+        qmake --version || true
         
     - name: Configure
       run: |
