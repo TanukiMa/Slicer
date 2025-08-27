@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest  # ARM環境を維持
+    runs-on: macos-latest
     
     steps:
     - uses: actions/checkout@v4
@@ -16,42 +16,33 @@ jobs:
         
     - name: Setup Build Environment
       run: |
-        # 現在のCMakeをアンリンク
         brew unlink cmake || true
-        
-        # 独自tapを作成してCMakeの古いバージョンを抽出
         brew tap-new local/cmake-old
-        
-        # CMake 3.28.x系を抽出（2023年のバージョン）
         brew extract --version=3.28.3 cmake local/cmake-old
-        
-        # 古いCMakeをインストール
         brew install cmake@3.28.3
-        
-        # Qt5とNinja
         brew install qt@5 ninja
         
-        # パス設定
         echo "/opt/homebrew/opt/cmake@3.28.3/bin" >> $GITHUB_PATH
         echo "/opt/homebrew/opt/qt@5/bin" >> $GITHUB_PATH
         
-    - name: Verify versions
-      run: |
-        cmake --version
-        which cmake
-        qmake --version || true
-        
-    - name: Configure
+    - name: Configure with ARM64 support
       run: |
         mkdir build && cd build
         cmake -GNinja \
           -DCMAKE_BUILD_TYPE:STRING=Release \
           -DQt5_DIR:PATH=$(brew --prefix qt@5)/lib/cmake/Qt5 \
+          -DCMAKE_OSX_ARCHITECTURES:STRING=arm64 \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=11.0 \
           -DSlicer_BUILD_TESTING:BOOL=OFF \
           -DSlicer_BUILD_DOCUMENTATION:BOOL=OFF \
+          -DSlicer_BUILD_EXTENSIONS:BOOL=OFF \
+          -DSlicer_USE_SYSTEM_TBB:BOOL=OFF \
+          -DTBB_BUILD_SHARED:BOOL=ON \
+          -DTBB_BUILD_STATIC:BOOL=OFF \
           ..
           
     - name: Build
       run: |
         cd build
-        ninja -j4
+        ninja -j1  # シングルスレッドで安定性向上
+      timeout-minutes: 360  # 6時間制限
