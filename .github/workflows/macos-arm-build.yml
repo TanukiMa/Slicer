@@ -25,24 +25,32 @@ jobs:
         echo "/opt/homebrew/opt/cmake@3.28.3/bin" >> $GITHUB_PATH
         echo "/opt/homebrew/opt/qt@5/bin" >> $GITHUB_PATH
         
-    - name: Configure with ARM64 support
+    - name: Configure with unified ARM64 architecture
       run: |
         mkdir build && cd build
         cmake -GNinja \
           -DCMAKE_BUILD_TYPE:STRING=Release \
           -DQt5_DIR:PATH=$(brew --prefix qt@5)/lib/cmake/Qt5 \
           -DCMAKE_OSX_ARCHITECTURES:STRING=arm64 \
-          -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=11.0 \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=12.0 \
           -DSlicer_BUILD_TESTING:BOOL=OFF \
           -DSlicer_BUILD_DOCUMENTATION:BOOL=OFF \
           -DSlicer_BUILD_EXTENSIONS:BOOL=OFF \
           -DSlicer_USE_SYSTEM_TBB:BOOL=OFF \
           -DTBB_BUILD_SHARED:BOOL=ON \
           -DTBB_BUILD_STATIC:BOOL=OFF \
+          -DCMAKE_CXX_FLAGS:STRING="-arch arm64" \
+          -DCMAKE_C_FLAGS:STRING="-arch arm64" \
+          -DSLICER_SUPERBUILD_CMAKE_OSX_ARCHITECTURES:STRING=arm64 \
           ..
           
-    - name: Build
+    - name: Build with architecture verification
       run: |
         cd build
-        ninja -j1  # シングルスレッドで安定性向上
-      timeout-minutes: 360  # 6時間制限
+        
+        # 環境変数でアーキテクチャを強制
+        export CMAKE_OSX_ARCHITECTURES=arm64
+        export ARCHFLAGS="-arch arm64"
+        
+        ninja -j1 -v  # verboseモードで詳細ログ
+      timeout-minutes: 360
