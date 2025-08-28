@@ -25,7 +25,16 @@ jobs:
         echo "/opt/homebrew/opt/cmake@3.28.3/bin" >> $GITHUB_PATH
         echo "/opt/homebrew/opt/qt@5/bin" >> $GITHUB_PATH
         
-    - name: Configure with unified ARM64 architecture
+    - name: Force ARM64 environment
+      run: |
+        # 全ての環境変数でARM64を強制
+        echo "CMAKE_OSX_ARCHITECTURES=arm64" >> $GITHUB_ENV
+        echo "ARCHFLAGS=-arch arm64" >> $GITHUB_ENV
+        echo "CFLAGS=-arch arm64" >> $GITHUB_ENV
+        echo "CXXFLAGS=-arch arm64" >> $GITHUB_ENV
+        echo "LDFLAGS=-arch arm64" >> $GITHUB_ENV
+        
+    - name: Configure with forced architecture
       run: |
         mkdir build && cd build
         cmake -GNinja \
@@ -37,20 +46,22 @@ jobs:
           -DSlicer_BUILD_DOCUMENTATION:BOOL=OFF \
           -DSlicer_BUILD_EXTENSIONS:BOOL=OFF \
           -DSlicer_USE_SYSTEM_TBB:BOOL=OFF \
-          -DTBB_BUILD_SHARED:BOOL=ON \
-          -DTBB_BUILD_STATIC:BOOL=OFF \
           -DCMAKE_CXX_FLAGS:STRING="-arch arm64" \
           -DCMAKE_C_FLAGS:STRING="-arch arm64" \
           -DSLICER_SUPERBUILD_CMAKE_OSX_ARCHITECTURES:STRING=arm64 \
+          -DTBB_CMAKE_OSX_ARCHITECTURES:STRING=arm64 \
           ..
           
-    - name: Build with architecture verification
+    - name: Clean and rebuild TBB if needed
       run: |
         cd build
+        # TBBが既にx86_64でビルドされている場合、削除
+        if [ -d "tbb-install/lib" ]; then
+          rm -rf tbb-install tbb-build tbb-prefix
+        fi
         
-        # 環境変数でアーキテクチャを強制
-        export CMAKE_OSX_ARCHITECTURES=arm64
-        export ARCHFLAGS="-arch arm64"
-        
-        ninja -j1 -v  # verboseモードで詳細ログ
+    - name: Build with forced ARM64
+      run: |
+        cd build
+        ninja -j1 -v
       timeout-minutes: 360
