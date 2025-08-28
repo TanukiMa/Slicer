@@ -32,7 +32,7 @@ jobs:
           -DCMAKE_BUILD_TYPE:STRING=Release \
           -DQt5_DIR:PATH=$(brew --prefix qt@5)/lib/cmake/Qt5 \
           -DCMAKE_OSX_ARCHITECTURES:STRING=arm64 \
-          -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=12.0 \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=13.0 \
           -DSlicer_BUILD_TESTING:BOOL=OFF \
           -DSlicer_BUILD_DOCUMENTATION:BOOL=OFF \
           -DSlicer_BUILD_EXTENSIONS:BOOL=OFF \
