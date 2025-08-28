@@ -1,4 +1,4 @@
-name: Build Slicer macOS ARM
+name: Build Slicer macOS ARM64 (Native)
 
 on:
   push:
@@ -20,21 +20,14 @@ jobs:
         brew tap-new local/cmake-old
         brew extract --version=3.28.3 cmake local/cmake-old
         brew install cmake@3.28.3
+        
+        # Qt5をソースからビルド（ARM64サポートのため）
         brew install qt@5 ninja
         
         echo "/opt/homebrew/opt/cmake@3.28.3/bin" >> $GITHUB_PATH
         echo "/opt/homebrew/opt/qt@5/bin" >> $GITHUB_PATH
         
-    - name: Force ARM64 environment
-      run: |
-        # 全ての環境変数でARM64を強制
-        echo "CMAKE_OSX_ARCHITECTURES=arm64" >> $GITHUB_ENV
-        echo "ARCHFLAGS=-arch arm64" >> $GITHUB_ENV
-        echo "CFLAGS=-arch arm64" >> $GITHUB_ENV
-        echo "CXXFLAGS=-arch arm64" >> $GITHUB_ENV
-        echo "LDFLAGS=-arch arm64" >> $GITHUB_ENV
-        
-    - name: Configure with forced architecture
+    - name: Configure Slicer for ARM64 (Sequential SMP)
       run: |
         mkdir build && cd build
         cmake -GNinja \
@@ -46,22 +39,24 @@ jobs:
           -DSlicer_BUILD_DOCUMENTATION:BOOL=OFF \
           -DSlicer_BUILD_EXTENSIONS:BOOL=OFF \
           -DSlicer_USE_SYSTEM_TBB:BOOL=OFF \
+          -DSlicer_VTK_SMP_IMPLEMENTATION_TYPE:STRING=Sequential \
           -DCMAKE_CXX_FLAGS:STRING="-arch arm64" \
           -DCMAKE_C_FLAGS:STRING="-arch arm64" \
           -DSLICER_SUPERBUILD_CMAKE_OSX_ARCHITECTURES:STRING=arm64 \
-          -DTBB_CMAKE_OSX_ARCHITECTURES:STRING=arm64 \
           ..
           
-    - name: Clean and rebuild TBB if needed
+    - name: Build Slicer
       run: |
         cd build
-        # TBBが既にx86_64でビルドされている場合、削除
-        if [ -d "tbb-install/lib" ]; then
-          rm -rf tbb-install tbb-build tbb-prefix
-        fi
-        
-    - name: Build with forced ARM64
-      run: |
-        cd build
-        ninja -j1 -v
+        export CMAKE_OSX_ARCHITECTURES=arm64
+        export ARCHFLAGS="-arch arm64"
+        ninja -j2
       timeout-minutes: 360
+      
+    - name: Verify build
+      run: |
+        cd build
+        if [ -f "Slicer-build/Slicer.app/Contents/MacOS/Slicer" ]; then
+          file Slicer-build/Slicer.app/Contents/MacOS/Slicer
+          echo "Build successful!"
+        fi
